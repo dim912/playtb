@@ -1,0 +1,14 @@
+# (Higher priority routes first)
+#methods : POST, PUT, DELETE, HEAD, OPTIONS
+# static path => GET   /clients/all          controllers.Clients.list()
+#dynamic path => GET   /clients/:id          controllers.Clients.show(id: Long)
+
+
+# An example controller showing a sample home page
+GET     /name/:name                controllers.HomeController.indexWithParam(name:String)
+GET   /posts      controllers.Default.todo
+GET     /                           controllers.HomeController.index
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+
