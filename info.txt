@@ -88,6 +88,117 @@ GET   /clients    controllers.Default.error
 GET   /posts      controllers.Default.todo
 
 
+Manupulating the Response
+--------------------------
+
+=> Auto Detected looking at the body passed to ok method.
+
+JsonNode json = Json.toJson(object);
+Result jsonResult = ok(json);
+will set the Content-Type header to application/json.
+
+Setting context type header manually
+------------------------------------
+Result htmlResult = ok("<h1>Hello World!</h1>").as("text/html");
+
+
+Session and Flash scopes
+------------------------
+
+Session - available during whole session
+Flash - available to the next request
+
+
+Important - Unlike servlets => play maintain Session, flash data in cookies(4kb max)
+*cookies are signed with a secret key(if client modify => gets invalid)
+
+
+Play session => should not be used as a cache.
+
+For cache => Play built-in cache can be used(session Id as cache key )
+
+Session cookies
+---------------
+
+configured on application.conf
+
+session Timeout
+----------------
+=> by default => no timeout
+if needed
+set => play.http.session.maxAge in application.conf
+this will set play.http.session.jwt.expiresAfter to the same value auto.
+
+Flash Scope
+-----------
+=> kept only for one request
+=> not signed => meaning client can modify them
+
+=> could subject to race conditions.
+
+=> should only be used to trasposrt success/error messages.
+
+
+Ex : After saving an item, routing to home page and how a "success" message on page
+
+Ex:
+public Result save() {
+    flash("success", "The item has been created");
+    return redirect("/home");
+}
+
+public Result index() {
+    String message = flash("success");
+    if(message == null) {
+        message = "Welcome!";
+    }
+    return ok(message);
+}
+
+
+Body Parser
+------------
+
+Since the header is smalled => it is get prased to a
+But body is bigger => it is not buffered to memory => and modled as a stream
+=> if needs to body to get parsed into an Object => use BodyParser
+
+Since Play is Asynchronouse => traditional blocking input streams are not suitable
+=> so play use "Akka Streams"
+
+=> If no body praser is selected
+    => play prasers accordingly looking at Content-Type header
+
+application/json => is prased as a JsonNode
+application/x-www-form-urlencoded => as Map<Strin,String[]>
+
+body can be assed through body() method on Request
+wrapped in RequestBody object
+
+public Result index() {
+    JsonNode json = request().body().asJson();
+    return ok("Got name: " + json.get("name").asText());
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
