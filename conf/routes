@@ -6,6 +6,9 @@
 
 # An example controller showing a sample home page
 GET     /json/name/:name                controllers.HomeController.indexWithParamJson(name:String)
+GET     /json/sync/info                controllers.HomeController.syncInfo
+GET     /json/async/info                controllers.HomeController.asyncInfo
+GET     /json/blockingAPI/info                controllers.HomeController.blockingCallInfo
 GET     /name/:name                    controllers.HomeController.indexWithParam(name:String)
 GET   /posts      controllers.Default.todo
 GET     /logout                     controllers.HomeController.logout

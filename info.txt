@@ -180,6 +180,148 @@ public Result index() {
     return ok("Got name: " + json.get("name").asText());
 }
 
+Action Composition
+------------------
+
+In play action => is a function which return a play.mvc.Result value
+
+Action provided by Java API is => a instance of p
+
+Play has a default play.mvc.Action object which delegate requests to action methods.
+
+If we need to customize the behaviour(Example: Log every request), we can create our own custom Action class
+
+To Register a method with a custom Action : use =>  @With(VerboseAction.class)
+
+* every request must be served by a distincet instance of play.mvc.Action( must not be singalton)
+
+
+Asynchronouse Results
+---------------------
+
+Internally play ins asynchronouse bottom-up.
+every request is handled non blocking way
+
+So => Application code shoudl avoid blocking thread in controllers
+
+=> So, If the result is not ready => Return a future => CompletionStage<Result>
+
+=> To create a CompletionState -> another promise is needed first, which will give the actual result needed to calculate result
+
+CompletionStage<Double> promiseOfPIValue = computePIAsynchronously();
+// Runs in same thread
+CompletionStage<Result> promiseOfResult = promiseOfPIValue.thenApply(pi ->
+                ok("PI value computed: " + pi)
+);
+
+Play asynchronuse API methods => give CompletionStage.
+    Ex : play.libs.WS
+    play.libs.Akka
+
+CompletionStage.thenApply => executes the completionstage in same calling thread => for non CUP bound logics
+
+For Async => CompletionStage.supplyAsync()
+
+// import static java.util.concurrent.CompletableFuture.supplyAsync;
+// creates new task
+CompletionStage<Integer> promiseOfInt = CompletableFuture.supplyAsync(() ->
+        intensiveComputation());
+
+=> in SupplyAsync => task will be places in fork join pool ( may be called from a different thread) => use the default executor
+
+*  Only the “*Async” methods from CompletionStage provide asynchronous execution.*
+
+
+Using HTTP ExecutionContext
+---------------------------
+
+=> must supply HTTP executon context explicitly as an executor => when using CompletionStatge inside an Action.
+(to eunsure, HTTP.COntext remain in scope)
+Else => “There is no HTTP Context available from here” error comes when call request() or any other depends on Http.Context
+
+Using CustomExecutionContext and HttpExecution
+-----------------------------------------------
+
+Because HttpExecutionContext is still a default play ExecutionContext.
+If to call a blocking API(Ex: JDBC) => then executoonStage run on a different executor to move it from plays rendering thread pool.
+
+How to do : => subclass  play.libs.concurrent.CustomExecutionContext reference to custom dispatcher(akka)
+
+public class JDBCExecutionContext extends CustomExecutionContext {
+    @Inject
+    public JDBCExecutionContext(ActorSystem actorSystem, String name) {
+        //use a custom thead pool defined in application.conf
+        //(done through akka dispatcher configuration)
+        super(actorSystem, "app.jdbcThreadPool");
+    }
+}
+
+=> once custom Dispatcher is there => wrap it with HttpException.fromThread:
+
+public class Application extends Controller {
+
+    private MyExecutionContext myExecutionContext;
+
+    @Inject
+    public Application(MyExecutionContext myExecutionContext) {
+        this.myExecutionContext = myExecutionContext;
+    }
+
+    public CompletionStage<Result> index() {
+        // Wrap an existing thread pool, using the context from the current thread
+        Executor myEc = HttpExecution.fromThread((Executor) myExecutionContext);
+        return supplyAsync(() -> intensiveComputation(), myEc)
+                .thenApplyAsync(i -> ok("Got result: " + i), myEc);
+    }
+
+    public int intensiveComputation() { return 2;}
+}
+
+Note => CompletionStage can not convert blocking to non blocking
+=> it is only a wrapper
+=> so a separte execution context should be given to execute blocking operations.
+
+
+=> Play Actions are asynchronuse by default
+=> controller code below Returned ins internally enclosed in a promise
+=> though Action return Result or CompletionStage<Result> => both objects are handled internally the same way.(not two ways like asyc, and sync. its only async)
+public Result index() {
+    return ok("Got request " + request() + "!");
+}
+
+Handling Time-outs
+------------------
+
+=> to avoid web brower block
+
+=> can use "play.libs.concurrent.Futures.timeout" to wrap CompletionStage in non-blocking timeouts
+
+=> timeOut is not same as cancellation => even in timeout the future get complets => even the vlaue is  not returned
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
